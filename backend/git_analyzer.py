@@ -1,13 +1,14 @@
 from git import Repo
 
-def analyze_repo(repo_path):
+def analyze_repo(repo_path, max_commits=500):
     try:
         repo = Repo(repo_path)
-        commits = list(repo.iter_commits('HEAD', max_count=100))
+        commits = list(repo.iter_commits('HEAD', max_count=max_commits))
         patterns = []
+        keywords = ['fix', 'bug', 'revert', 'patch', 'hotfix', 'repair', 'error', 'issue', 'crash', 'broken']
         for commit in commits:
             msg = commit.message.lower()
-            if any(k in msg for k in ['fix', 'bug', 'revert', 'patch', 'hotfix', 'repair']):
+            if any(k in msg for k in keywords):
                 diff = []
                 if commit.parents:
                     diffs = commit.parents[0].diff(commit, create_patch=True)
@@ -21,9 +22,10 @@ def analyze_repo(repo_path):
                     'message': commit.message.strip(),
                     'author': str(commit.author),
                     'date': commit.committed_datetime.isoformat(),
-                    'diff_preview': '\n'.join(diff)[:500]
+                    'diff_preview': '\n'.join(diff)[:1000],
+                    'files_changed': [item.a_path for item in commit.stats.files]
                 })
         return patterns
     except Exception as e:
+        print(f"Error analyzing repo: {e}")
         return []
-    
